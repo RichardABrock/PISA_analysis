@@ -27,19 +27,16 @@ PISA_filtered <- PISA_df %>%
 # Create 10 datasets, one for each plausible value
 datalist <- list()
 
-PISA_filtered %>%
+PISA_filtered <- PISA_filtered %>%
   select(
     W_FSTUWT,
     starts_with("W_FSTURWT"),
     ESCS, HOMEPOS, REGION, GRADE, CNTSCHID,
     matches("^PV[0-9]+MATH"),
     matches("^PV[0-9]+READ"),
-    matches("^PV[0-9]+SCIE")
-  ) %>%
+    matches("^PV[0-9]+SCIE")) %>%
   mutate(
-    W_FSCHWT = 1,
-    across(everything(), ~as.numeric(as.character(.x)))
-  ) %>%
+    W_FSCHWT = 1) %>%
   as.data.frame()
 
 # Create 10 datasets, one for each plausible value
@@ -114,3 +111,4 @@ combined <- res_grade_means_read[["stat"]] %>%
   mutate(REGION = as.numeric(REGION)) %>% 
   left_join(region_lookup, by = c("REGION" = "REGION_id")) %>%
   select(GRADE, REGION_name, n_cases, read, maths, science)
+combined
