@@ -10,6 +10,13 @@ PISA_2025 <- read_parquet("/Users/k1765032/Library/CloudStorage/OneDrive-King\'s
 # Convert to data frame
 PISA_df <- as.data.frame(PISA_2025)
 
+# region look up - BIFIE only likes numeric so have to add back in
+region_lookup <- PISA_df %>% 
+  filter(CNT == "United Kingdom") %>% 
+  distinct(REGION) %>% 
+  mutate(REGION_id = as.numeric(as.factor(REGION))) %>%
+  rename(REGION_name = REGION)
+
 # sort by school ID
 PISA_filtered <- PISA_df %>%
   filter(CNT == "United Kingdom") %>%
@@ -64,15 +71,15 @@ bifieobj <- BIFIE.data(
 res_grade_means_math <- BIFIE.univar(
   BIFIEobj = bifieobj,
   vars = "PVMATH",
-  group = "GRADE"
-)
+  group = c("GRADE","REGION")
+  )
 
 summary(res_grade_means_math)
 # for science
 res_grade_means_scie <- BIFIE.univar(
   BIFIEobj = bifieobj,
   vars = "PVSCIE",
-  group = "GRADE"
+  group = c("GRADE","REGION")
 )
 
 summary(res_grade_means_scie)
@@ -81,13 +88,22 @@ summary(res_grade_means_scie)
 res_grade_means_read <- BIFIE.univar(
   BIFIEobj = bifieobj,
   vars = "PVREAD",
-  group = "GRADE"
+  group = c("GRADE", "REGION")
 )
 
 summary(res_grade_means_read)
 
-combined <- data.frame(
-  GRADE = c("-2","-1","0","1"),
-  maths = res_grade_means_math[["stat"]][["M"]],
-  science = res_grade_means_scie[["stat"]][["M"]],
-  read = res_grade_means_read[["stat"]][["M"]])
+# for the UK
+
+combined <- res_grade_means_read[["stat"]] %>%
+  select(GRADE = groupval1,
+    REGION = groupval2,
+    n_cases = Ncases,
+    read = M) %>%
+  left_join(res_grade_means_math[["stat"]] %>% select(groupval1, groupval2, maths = M),
+    by = c("GRADE" = "groupval1", "REGION" = "groupval2")) %>%
+  left_join( res_grade_means_scie[["stat"]] %>% select(groupval1, groupval2, science = M),
+    by = c("GRADE" = "groupval1", "REGION" = "groupval2") ) %>%
+  mutate(REGION = as.numeric(REGION)) %>% 
+  left_join(region_lookup, by = c("REGION" = "REGION_id")) %>%
+  select(GRADE, REGION_name, n_cases, read, maths, science)
