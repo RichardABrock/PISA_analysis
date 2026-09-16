@@ -27,33 +27,40 @@ PISA_filtered <- PISA_df %>%
 # Create 10 datasets, one for each plausible value
 datalist <- list()
 
-for (i in 1:10) {
-  pv_math_col <- paste0("PV", i, "MATH")
-  pv_read_col <- paste0("PV", i, "READ")
-  pv_scie_col <- paste0("PV", i, "SCIE")
-  
-  dat_temp <- PISA_filtered %>%
+PISA_filtered %>%
+  select(
+    W_FSTUWT,
+    starts_with("W_FSTURWT"),
+    ESCS, HOMEPOS, REGION, GRADE, CNTSCHID,
+    matches("^PV[0-9]+MATH"),
+    matches("^PV[0-9]+READ"),
+    matches("^PV[0-9]+SCIE")
+  ) %>%
+  mutate(
+    W_FSCHWT = 1,
+    across(everything(), ~as.numeric(as.character(.x)))
+  ) %>%
+  as.data.frame()
+
+# Create 10 datasets, one for each plausible value
+datalist <- map(1:10, \(i) {
+  message(i)
+  PISA_filtered %>%
     select(
       W_FSTUWT,
       starts_with("W_FSTURWT"),
       ESCS, HOMEPOS, REGION, GRADE, CNTSCHID,
-      all_of(pv_math_col),
-      all_of(pv_read_col),
-      all_of(pv_scie_col)
+      all_of(paste0("PV", i, "MATH")),
+      all_of(paste0("PV", i, "READ")),
+      all_of(paste0("PV", i, "SCIE"))
     ) %>%
     rename(
-      PVMATH = all_of(pv_math_col),
-      PVREAD = all_of(pv_read_col),
-      PVSCIE = all_of(pv_scie_col)
+      PVMATH = all_of(paste0("PV", i, "MATH")),
+      PVREAD = all_of(paste0("PV", i, "READ")),
+      PVSCIE = all_of(paste0("PV", i, "SCIE"))
     )
-  
-  dat_temp$W_FSCHWT <- 1
-  
-  # Convert all columns to numeric safely
-  dat_temp <- as.data.frame(lapply(dat_temp, function(x) as.numeric(as.character(x))))
-  
-  datalist[[i]] <- dat_temp
-}
+})
+
 
 # Extract replicate weights
 datarep <- PISA_filtered[, grep("W_FSTURWT", colnames(PISA_filtered))]
